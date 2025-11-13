@@ -1,9 +1,10 @@
 <script lang="ts">
+	import SortHeader from '$lib/components/sort-header.svelte'
 	import { formatDate } from '$lib/date'
 	import { randInt } from '$lib/rand'
 	import { randomMessage } from '$lib/test-data'
-	import { queries } from '$lib/zero/queries'
-	import type { Message } from '$lib/zero/schema'
+	import { queries } from '$lib/zero/queries.svelte'
+	import type { Message } from '$lib/zero/schema.js'
 	import { useZero } from '$lib/zero/zero.svelte'
 
 	let { data } = $props()
@@ -20,20 +21,19 @@
 	const mediums = zero.q(queries.allMediums()) // Using q alias!
 	const all_messages = zero.q(queries.allMessages())
 	const visible_messages = zero.q(queries.filteredMessages({}))
-	const current_user = zero.q(queries.getUser(''))
+	const current_user = zero.q(queries.getUser(data.userID, ''))
 	let current_user_messages = zero.q(queries.getUserMessages(''))
+	let more = $state(current_user_messages)
 
-	let more = zero.q(queries.getUserMessages(''))
-
-	type Filters = {
-		senderID?: string
-		mediumID?: string
-		body?: string
-		timestamp?: string
+	interface QueryMessage extends Message {
+		orderBy?: { col: 'id' | 'senderID' | 'mediumID' | 'body' | 'timestamp'; dir: 'asc' | 'desc' }
+		limit?: number
 	}
 
-	function applyFilter({ senderID, mediumID, body, timestamp }: Filters) {
-		visible_messages.updateQuery(queries.filteredMessages({ senderID, mediumID, body, timestamp }))
+	function applyFilter({ senderID, mediumID, body, timestamp, orderBy }: Partial<QueryMessage>) {
+		visible_messages.updateQuery(
+			queries.filteredMessages({ senderID, mediumID, body, timestamp, orderBy })
+		)
 	}
 
 	function hasFilters() {
@@ -104,19 +104,14 @@
 		location.reload()
 	}
 
-	// If initial sync hasn't completed, these can be empty.
-	function initialSyncComplete() {
-		return users.data.length && mediums.data.length
-	}
-
 	function user() {
 		return users.data.find((user) => user.id === zero.userID)?.name ?? 'anon'
 	}
 </script>
 
-{#if !initialSyncComplete()}
-	<div style="margin: auto;">Loading........</div>
-	<progress>Loading</progress>
+{#if !users.data.length && !mediums.data.length}
+	<div style="margin: auto;"></div>
+	<progress></progress>
 {:else}
 	<div class="controls">
 		<div>
@@ -129,16 +124,15 @@
 			<button onmousedown={() => toggleLogin()}>
 				{user() === 'anon' ? 'Login' : 'Logout'}
 			</button>
+			<button onmousedown={() => {}}> Create Post </button>
 		</div>
 	</div>
+
 	<div class="controls">
 		<div>
 			From:
-			<select
-				onchange={({ currentTarget }) => applyFilter({ senderID: currentTarget.value })}
-				style=" flex: 1"
-			>
-				<option value="">Sender</option>
+			<select onchange={({ currentTarget }) => applyFilter({ senderID: currentTarget.value })}>
+				<option value="">All Senders</option>
 				{#each users.data as user}
 					<option value={user.id}>{user.name}</option>
 				{/each}
@@ -146,11 +140,8 @@
 		</div>
 		<div>
 			By:
-			<select
-				onchange={({ currentTarget }) => applyFilter({ mediumID: currentTarget.value })}
-				style="flex: 1"
-			>
-				<option value="">Medium</option>
+			<select onchange={({ currentTarget }) => applyFilter({ mediumID: currentTarget.value })}>
+				<option value="">All Mediums</option>
 				{#each mediums.data as medium}
 					<option value={medium.id}>{medium.name}</option>
 				{/each}
@@ -162,16 +153,11 @@
 				type="text"
 				placeholder="message"
 				oninput={({ currentTarget }) => applyFilter({ body: currentTarget.value })}
-				style="flex: 1"
 			/>
 		</div>
 		<div>
 			After:
-			<input
-				type="date"
-				oninput={({ currentTarget }) => (filterDate = currentTarget.value)}
-				style="flex: 1"
-			/>
+			<input type="date" oninput={({ currentTarget }) => (filterDate = currentTarget.value)} />
 		</div>
 	</div>
 
@@ -181,9 +167,9 @@
 				<div>Showing all {visible_messages.data.length} messages</div>
 			{:else}
 				<div>
-					Showing {visible_messages.data.length} of {all_messages.data.length}{' '}
-					messages. Try opening{' '}
-					<a href="/" target="_blank"> another tab </a>{' '}
+					Showing {visible_messages.data.length} of {all_messages.data.length}
+					messages. Try opening
+					<a href="/" target="_blank"> another tab </a>
 					to see them all!
 				</div>
 			{/if}
@@ -198,11 +184,19 @@
 		<table class="messages">
 			<thead>
 				<tr>
-					<th>Sender</th>
-					<th>Medium</th>
-					<th>Message</th>
-					<th>Sent</th>
-					<th>Edit</th>
+					<SortHeader onclick={(dir) => applyFilter({ orderBy: { col: 'senderID', dir } })}>
+						Sender
+					</SortHeader>
+					<SortHeader onclick={(dir) => applyFilter({ orderBy: { col: 'mediumID', dir } })}>
+						Medium
+					</SortHeader>
+					<SortHeader onclick={(dir) => applyFilter({ orderBy: { col: 'body', dir } })}>
+						Message
+					</SortHeader>
+					<SortHeader onclick={(dir) => applyFilter({ orderBy: { col: 'timestamp', dir } })}>
+						Sent
+					</SortHeader>
+					<SortHeader nobutton={true}>Edit</SortHeader>
 				</tr>
 			</thead>
 			<tbody>
@@ -212,8 +206,10 @@
 							><a
 								href="##"
 								onclick={() => {
-									current_user.updateQuery(queries.getUser(message.senderID))
-									current_user_messages.updateQuery(queries.getUserMessages(message.senderID))
+									current_user.updateQuery(queries.getUser(data.userID, message.senderID))
+									current_user_messages.updateQuery(
+										queries.getUserMessages(message.senderID, undefined, 10)
+									)
 									user_dialog?.showModal()
 								}}
 							>
@@ -246,26 +242,32 @@
 			<li>{message.body}</li>
 		{/each}
 	</ul>
-	<button
-		onclick={() => {
-			more = zero.q(
-				queries.getUserMessages(
-					current_user.data?.id!,
-					current_user_messages.data[current_user_messages.data.length - 1]
+	<div class="flex-between">
+		<button
+			onclick={() => {
+				current_user_messages.updateQuery(
+					queries.getUserMessages(
+						current_user.data?.id!,
+						current_user_messages.data[current_user_messages.data.length - 1]
+					)
 				)
-			)
-
-			// current_user_messages.updateQuery(
-			// 	queries.getUserMessages(
-			// 		current_user.data?.id!,
-			// 		current_user_messages.data[current_user_messages.data.length - 1]
-			// 	)
-			// )
-		}}
-	>
-		Load More
-	</button>
-	<form method="dialog">
-		<button>OK</button>
-	</form>
+			}}
+		>
+			Load More
+		</button>
+		<form method="dialog">
+			<button>OK</button>
+		</form>
+	</div>
 </dialog>
+
+<style>
+	dialog {
+		min-width: 480px;
+	}
+
+	.flex-between {
+		display: flex;
+		justify-content: space-between;
+	}
+</style>

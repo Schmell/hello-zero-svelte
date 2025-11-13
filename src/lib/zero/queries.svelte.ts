@@ -1,11 +1,11 @@
-import { syncedQuery, escapeLike } from '@rocicorp/zero'
+import { escapeLike, syncedQuery, syncedQueryWithContext } from '@rocicorp/zero'
 import z from 'zod'
 import { builder, type Message } from './schema'
 
 export const queries = {
 	allUsers: syncedQuery('user', z.tuple([]), () => builder.user),
 
-	getUser: syncedQuery('sender', z.tuple([z.string()]), (id: string = '') => {
+	getUser: syncedQueryWithContext('sender', z.tuple([z.string()]), (ctx: any, id: string = '') => {
 		return builder.user.where('id', id).one()
 	}),
 
@@ -22,7 +22,7 @@ export const queries = {
 	getUserMessages: syncedQuery(
 		'user_messages',
 		z.tuple([z.string(), z.any().optional(), z.number().nonnegative().optional()]),
-		(senderID: string, start?: Message, limit: number = 100) => {
+		(senderID: string, start?: Message, limit: number = 10) => {
 			let q = builder.message.where('senderID', senderID).limit(limit)
 			if (start) {
 				q = q.start(start)
@@ -38,14 +38,17 @@ export const queries = {
 				senderID: z.string().optional(),
 				mediumID: z.string().optional(),
 				body: z.string().optional(),
-				timestamp: z.string().optional(),
+				timestamp: z.number().optional(),
+				orderBy: z
+					.object({
+						col: z.enum(['id', 'senderID', 'mediumID', 'body', 'timestamp']),
+						dir: z.enum(['asc', 'desc']),
+					})
+					.optional(),
 			}),
 		]),
-		({ senderID, mediumID, body, timestamp }) => {
-			let q = builder.message
-				.related('medium', (q) => q.one())
-				.related('sender', (q) => q.one())
-				.orderBy('timestamp', 'desc')
+		({ senderID, mediumID, body, timestamp, orderBy }) => {
+			let q = builder.message.related('medium', (q) => q.one()).related('sender', (q) => q.one())
 
 			if (senderID) {
 				q = q.where('senderID', senderID)
@@ -59,8 +62,13 @@ export const queries = {
 			if (timestamp) {
 				q = q.where('timestamp', '>=', timestamp ? new Date(timestamp).getTime() : 0)
 			}
+			if (orderBy) {
+				q = q.orderBy(orderBy.col, orderBy.dir)
+			}
 
 			return q
 		}
 	),
 }
+
+export type FilteredMessages = ReturnType<typeof queries.filteredMessages>
