@@ -20,7 +20,7 @@
 	const all_messages = zero.q(queries.allMessages())
 	const visible_messages = zero.q(queries.filteredMessages({}))
 	const current_user = zero.q(queries.getUser(''))
-	let current_user_messages = zero.q(queries.getUserMessages(''))
+	const current_user_messages = zero.q(queries.getUserMessages(''))
 
 	$effect(() => {
 		visible_messages.updateQuery(
