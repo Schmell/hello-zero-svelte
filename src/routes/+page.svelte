@@ -22,21 +22,16 @@
 	const current_user = zero.q(queries.getUser(''))
 	let current_user_messages = zero.q(queries.getUserMessages(''))
 
-	function applyFilter(filterKeys: {
-		senderID?: string
-		mediumID?: string
-		body?: string
-		timestamp?: string
-	}) {
-		if (!filterKeys.senderID) {
-			filterKeys.senderID = filterUser
-		}
-		visible_messages.updateQuery(queries.filteredMessages(filterKeys))
-	}
-
-	function hasFilters() {
-		return filterUser || filterMedium || filterText || filterDate
-	}
+	$effect(() => {
+		visible_messages.updateQuery(
+			queries.filteredMessages({
+				senderID: filterUser,
+				mediumID: filterMedium,
+				body: filterText,
+				timestamp: filterDate,
+			})
+		)
+	})
 
 	$effect(() => {
 		if (action !== undefined) {
@@ -65,6 +60,10 @@
 			zero.mutate.message.delete(messages[index].id)
 			return true
 		}
+	}
+
+	function hasFilters() {
+		return filterUser || filterMedium || filterText || filterDate
 	}
 
 	function stopAction() {
@@ -102,17 +101,13 @@
 		location.reload()
 	}
 
-	// If initial sync hasn't completed, these can be empty.
-	function initialSyncComplete() {
-		return users.data.length && mediums.data.length
-	}
-
 	function user() {
 		return users.data.find((user) => user.id === zero.userID)?.name ?? 'anon'
 	}
+	//
 </script>
 
-{#if !initialSyncComplete()}
+{#if !users.data.length && !mediums.data.length}
 	<div style="margin: auto;">Loading........</div>
 	<progress>Loading</progress>
 {:else}
@@ -135,9 +130,7 @@
 			<select
 				onchange={({ currentTarget }) => {
 					filterUser = currentTarget.value
-					applyFilter({ senderID: currentTarget.value })
 				}}
-				style=" flex: 1"
 			>
 				<option value="">Sender</option>
 				{#each users.data as user}
@@ -150,9 +143,7 @@
 			<select
 				onchange={({ currentTarget }) => {
 					filterMedium = currentTarget.value
-					applyFilter({ mediumID: currentTarget.value })
 				}}
-				style="flex: 1"
 			>
 				<option value="">Medium</option>
 				{#each mediums.data as medium}
@@ -165,16 +156,18 @@
 			<input
 				type="text"
 				placeholder="message"
-				oninput={({ currentTarget }) => applyFilter({ body: currentTarget.value })}
-				style="flex: 1"
+				oninput={({ currentTarget }) => {
+					filterText = currentTarget.value
+				}}
 			/>
 		</div>
 		<div>
 			After:
 			<input
 				type="date"
-				oninput={({ currentTarget }) => (filterDate = currentTarget.value)}
-				style="flex: 1"
+				onchange={({ currentTarget }) => {
+					filterMedium = currentTarget.value
+				}}
 			/>
 		</div>
 	</div>
