@@ -22,15 +22,16 @@
 	const current_user = zero.q(queries.getUser(''))
 	let current_user_messages = zero.q(queries.getUserMessages(''))
 
-	type Filters = {
+	function applyFilter(filterKeys: {
 		senderID?: string
 		mediumID?: string
 		body?: string
 		timestamp?: string
-	}
-
-	function applyFilter({ senderID, mediumID, body, timestamp }: Filters) {
-		visible_messages.updateQuery(queries.filteredMessages({ senderID, mediumID, body, timestamp }))
+	}) {
+		if (!filterKeys.senderID) {
+			filterKeys.senderID = filterUser
+		}
+		visible_messages.updateQuery(queries.filteredMessages(filterKeys))
 	}
 
 	function hasFilters() {
@@ -132,7 +133,10 @@
 		<div>
 			From:
 			<select
-				onchange={({ currentTarget }) => applyFilter({ senderID: currentTarget.value })}
+				onchange={({ currentTarget }) => {
+					filterUser = currentTarget.value
+					applyFilter({ senderID: currentTarget.value })
+				}}
 				style=" flex: 1"
 			>
 				<option value="">Sender</option>
@@ -144,7 +148,10 @@
 		<div>
 			By:
 			<select
-				onchange={({ currentTarget }) => applyFilter({ mediumID: currentTarget.value })}
+				onchange={({ currentTarget }) => {
+					filterMedium = currentTarget.value
+					applyFilter({ mediumID: currentTarget.value })
+				}}
 				style="flex: 1"
 			>
 				<option value="">Medium</option>
