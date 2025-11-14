@@ -1,4 +1,4 @@
-import type { ClientMutators } from '$lib/zero/mutators'
+import type { ClientMutators } from '$lib/zero/mutators.svelte'
 import type { Message, Schema } from '$lib/zero/schema'
 import type { ServerTransaction } from '@rocicorp/zero'
 import type { TransactionSql } from 'postgres'

@@ -19,8 +19,8 @@ export function createMutators(userID: string) {
 					console.error('No previous_message senderID')
 					return
 				}
-				console.log('Client mutator: ', previous_message.senderID, userID)
-				if (tx.location === 'client' && previous_message.senderID !== userID) {
+
+				if (previous_message.senderID !== userID) {
 					throw new Error('Must be sender of message to edit')
 				}
 

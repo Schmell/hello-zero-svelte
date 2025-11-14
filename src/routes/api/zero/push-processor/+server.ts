@@ -1,6 +1,6 @@
 import { ZERO_UPSTREAM_DB } from '$env/static/private'
 import { createServerMutators } from '$lib/server/server-mutators'
-import { createMutators } from '$lib/zero/mutators'
+import { createMutators } from '$lib/zero/mutators.svelte'
 import { schema } from '$lib/zero/schema'
 import { PostgresJSConnection, PushProcessor, ZQLDatabase } from '@rocicorp/zero/pg'
 import { json, type RequestHandler } from '@sveltejs/kit'

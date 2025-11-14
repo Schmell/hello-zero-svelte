@@ -2,8 +2,7 @@
 	import { formatDate } from '$lib/date'
 	import { randInt } from '$lib/rand'
 	import { randomMessage } from '$lib/test-data'
-	import { queries } from '$lib/zero/queries'
-	import type { Message } from '$lib/zero/schema'
+	import { queries } from '$lib/zero/queries.svelte.js'
 	import { useZero } from '$lib/zero/zero.svelte'
 
 	let { data } = $props()
@@ -22,8 +21,6 @@
 	const visible_messages = zero.q(queries.filteredMessages({}))
 	const current_user = zero.q(queries.getUser(''))
 	let current_user_messages = zero.q(queries.getUserMessages(''))
-
-	let more = zero.q(queries.getUserMessages(''))
 
 	type Filters = {
 		senderID?: string
@@ -234,9 +231,7 @@
 			</tbody>
 		</table>
 	{/if}
-	<!-- filteredMessages.data.length === 0 -->
 {/if}
-<!-- initialSyncComplete() -->
 
 <dialog bind:this={user_dialog}>
 	<h2>{current_user.data?.name}</h2>
@@ -246,25 +241,6 @@
 			<li>{message.body}</li>
 		{/each}
 	</ul>
-	<button
-		onclick={() => {
-			more = zero.q(
-				queries.getUserMessages(
-					current_user.data?.id!,
-					current_user_messages.data[current_user_messages.data.length - 1]
-				)
-			)
-
-			// current_user_messages.updateQuery(
-			// 	queries.getUserMessages(
-			// 		current_user.data?.id!,
-			// 		current_user_messages.data[current_user_messages.data.length - 1]
-			// 	)
-			// )
-		}}
-	>
-		Load More
-	</button>
 	<form method="dialog">
 		<button>OK</button>
 	</form>
