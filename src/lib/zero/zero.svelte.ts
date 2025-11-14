@@ -9,5 +9,6 @@ export function useZero(userID: string) {
 		schema,
 		userID,
 		mutators: createMutators(userID),
+		kvStore: 'idb',
 	})
 }
